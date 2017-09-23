@@ -1,13 +1,19 @@
-CC := qcc
+CC  := qcc
 
 INCLUDE := -I$(QNX_TARGET)/usr/include
 INCLUDE += -I$(QNX_TARGET)/usr/include/freetype2
+INCLUDE += -I$(QNX_TARGET)/usr/include/qt4/
+INCLUDE += -I$(QNX_TARGET)/usr/include/qt4/QtCore
 INCLUDE += -I./external/include
 
 # BB10 libraries
 LIBPATHS	:= -L$(QNX_TARGET)/armle-v7/lib
 LIBS    	:= -lbps -licui18n -licuuc -lscreen -lm -lfreetype -lclipboard
-LIBS    	+= -lconfig
+LIBS    	+= -lconfig -lbbplatform
+
+# cascades: QT4 libraries
+LIBPATHS += -L$(QNX_TARGET)/armle-v7/usr/lib/qt4/lib
+LIBS     += -lQtCore
 
 # Defines
 DEFINES := -D_FORTIFY_SOURCE=2 -D__PLAYBOOK__ -fstack-protector-strong 
@@ -23,8 +29,9 @@ LIBS     += -lconfig -lSDL12 -lTouchControlOverlay
 #DEBUGFLAGS	:= -O2
 DEBUGFLAGS	:= -O0 -g -DDEBUGMSGS
 CFLAGS    	:= $(INCLUDE) -V4.6.3,gcc_ntoarmv7le -Wc,-std=gnu99 $(DEBUGFLAGS)
+CPPFLAGS  	:= $(INCLUDE) -V4.6.3,gcc_ntoarmv7le $(DEBUGFLAGS)
 LDFLAGS   	:= $(LIBPATHS) $(LIBS)
-LDOPTS    	:= -Wl,-z,relro -Wl,-z,now
+LDOPTS    	:= -Wl,-z,relro -Wl,-z,now -lstdc++
 
 ASSET      	:= Device-Debug
 BINARY     	:= Term48-dev
@@ -33,21 +40,28 @@ BINARY_PATH	:= $(ASSET)/$(BINARY)
 SRCS := $(wildcard src/*.c)
 OBJS := $(SRCS:.c=.o )
 
+CASC_SRCS := $(wildcard src/cascades/*.cpp)
+CASC_OBJS := $(CASC_SRCS:.cpp=.opp )
+
 include ./signing/bbpass
 
 .PHONY: all clean package-debug deploy launch-debug
 
 all: package-debug
 
-$(BINARY): $(OBJS)
+$(BINARY): $(OBJS) $(CASC_OBJS)
 	mkdir -p $(ASSET)
-	$(CC) $(CFLAGS) $(LDFLAGS) $(LDOPTS) $(OBJS) -o $(BINARY_PATH)
+	$(CC) $(CFLAGS) $(OBJS) $(CASC_OBJS) $(LDFLAGS) $(LDOPTS) -o $(BINARY_PATH)
+
+%.opp: %.cpp
+	$(CC) $(CPPFLAGS) -c $(DEFINES) $< -o $@
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $(DEFINES) $< -o $@
 
 clean:
 	@rm -fv src/*.o
+	@rm -fv src/cascades/*.opp
 	@rm -fv $(BINARY_PATH)
 	@rmdir -v $(ASSET)
 	@rm -fv $(BINARY).bar

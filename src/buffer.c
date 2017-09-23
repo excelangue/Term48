@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include <stdio.h>
+#include <stdlib.h>
 #include <strings.h>
 
 #include "SDL.h"

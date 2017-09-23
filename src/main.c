@@ -40,6 +40,8 @@
 #include "io.h"
 #include "colors.h"
 
+#include "cascades/hub.h"
+
 static int exit_application = 0;
 
 static char slave_ptyname[L_ctermid];
@@ -1384,6 +1386,8 @@ int main(int argc, char **argv) {
 	if (prefs->auto_show_vkb) {
 		virtualkeyboard_show();
 	}
+
+	notify_instantpreview("Hello there\n");
 
 	/* start up main event loop */
 	SDL_Thread *render_thread = SDL_CreateThread(run_render, NULL);
