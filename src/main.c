@@ -333,7 +333,7 @@ int font_init(int font_size){
 
 	str[0] = 'a';
 	altsym_indicator = TTF_RenderUNICODE_Shaded(font, str, metamode_cursor_fg, metamode_cursor_bg);
-	if (shift_key_indicator == NULL){
+	if (altsym_indicator == NULL){
 		PRINT(stderr, "Couldn't render altsym_indicator surface: %s\n", TTF_GetError());
 		return TERM_FAILURE;
 	}
