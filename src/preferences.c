@@ -271,7 +271,7 @@ static symmenu_t* create_symmenu(config_t const *config, char const *path, int d
 			/* fill in the symkey row (rest done during render) */
 			for (int col = 0; col < def_row_lens[row]; ++col) {
 				menu->entries[entry_idx].from = def_entries[entry_idx].from;
-				menu->entries[entry_idx].to = strdup(def_entries[entry_idx].to);
+				menu->entries[entry_idx].to = def_entries[entry_idx].to;
 				
 				menu->keys[row][col].flash = '\0';
 				menu->keys[row][col].map = &menu->entries[entry_idx];
@@ -373,6 +373,7 @@ void destroy_preferences(pref_t *pref) {
 	free(pref->metamode_func_keys);
 
 	destroy_symmenu(pref->main_symmenu);
+	destroy_symmenu(pref->passport_bar);
 	
 	free(pref->keyhold_actions_exempt);
 
@@ -418,7 +419,7 @@ pref_t *read_preferences(const char* filename) {
 	prefs->text_color = create_int_array(config, "text_color", PREFS_COLOR_NUM_ELEMENTS, DEFAULT_TEXT_COLOR, 0);
 	prefs->background_color = create_int_array(config, "background_color", PREFS_COLOR_NUM_ELEMENTS, DEFAULT_BACKGROUND_COLOR, 0);
 	DEFAULT_LOOKUP(bool, config, "screen_idle_awake", prefs->screen_idle_awake, DEFAULT_SCREEN_IDLE_AWAKE);
-	DEFAULT_LOOKUP(bool, config, "auto_show_vkb", prefs->auto_show_vkb, DEFAULT_AUTO_SHOW_VKB);
+	DEFAULT_LOOKUP(bool, config, "is_passport", prefs->is_passport, DEFAULT_IS_PASSPORT);
 	DEFAULT_LOOKUP(int, config, "metamode_doubletap_key", prefs->metamode_doubletap_key, DEFAULT_METAMODE_DOUBLETAP_KEY);
 	DEFAULT_LOOKUP(int, config, "metamode_doubletap_delay", prefs->metamode_doubletap_delay, DEFAULT_METAMODE_DOUBLETAP_DELAY);
 	DEFAULT_LOOKUP(bool, config, "keyhold_actions", prefs->keyhold_actions, DEFAULT_KEYHOLD_ACTIONS);
@@ -439,6 +440,7 @@ pref_t *read_preferences(const char* filename) {
 
 	prefs->main_symmenu = create_symmenu(config, "main_symmenu", DEFAULT_SYMMENU_NUM_ROWS, DEFAULT_SYMMENU_ROW_LENS, DEFAULT_SYMMENU_ENTRIES);
 	prefs->altsym_entries = create_keymap_array(config, "altsym_entries", DEFAULT_ALTSYM_ENTRIES_LEN, DEFAULT_ALTSYM_ENTRIES);
+	prefs->passport_bar = create_symmenu(config, "passport_bar", PASSPORTVKB_NUM_ROWS, PASSPORTVKB_ROW_LENS, PASSPORTVKB_ENTRIES);
 
 	/* the accent menus are configurable, but we won't include them in the default config */
 	char am_name[] = {' ', '_', 'a', 'c', 'c', 'e', 'n', 't', 's', '\0'};
@@ -529,7 +531,6 @@ void save_preferences(pref_t const* prefs, char const* filename) {
 	set_int_array(root, "text_color", PREFS_COLOR_NUM_ELEMENTS, prefs->text_color);
 	set_int_array(root, "background_color", PREFS_COLOR_NUM_ELEMENTS, prefs->background_color);
 	PREF_SET(root, setting, "screen_idle_awake", bool, BOOL, prefs->screen_idle_awake);
-	PREF_SET(root, setting, "auto_show_vkb", bool, BOOL, prefs->auto_show_vkb);
 	PREF_SET(root, setting, "metamode_doubletap_key", int, INT, prefs->metamode_doubletap_key);
 	PREF_SET(root, setting, "metamode_doubletap_delay", int, INT, prefs->metamode_doubletap_delay);
 	PREF_SET(root, setting, "keyhold_actions", bool, BOOL, prefs->keyhold_actions);

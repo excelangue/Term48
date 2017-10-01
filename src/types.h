@@ -29,7 +29,7 @@ typedef struct _symmenu_t {
 typedef struct _pref_t {
 	char *font_path;
 	int font_size, *text_color, *background_color, screen_idle_awake,
-		auto_show_vkb, metamode_doubletap_key, metamode_doubletap_delay,
+		is_passport, metamode_doubletap_key, metamode_doubletap_delay,
 		keyhold_actions, metamode_hold_key, allow_resize_columns;
 	hitbox_t *metamode_hitbox;
 	char *tty_encoding;
@@ -40,6 +40,7 @@ typedef struct _pref_t {
 	symmenu_t *main_symmenu;
 	symmenu_t *accent_menus[26][2];
 	symmenu_t *altsym_entries;
+	symmenu_t *passport_bar;
 	
 	int sticky_sym_key, sticky_shift_key, sticky_alt_key;
 	int *keyhold_actions_exempt; /* terminated by -1 */

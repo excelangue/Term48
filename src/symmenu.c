@@ -178,15 +178,17 @@ SDL_Surface *render_symmenu(SDL_Surface *screen, pref_t *prefs, symmenu_t *menu)
 
 			/* from key */
 			cornerchar[0] = sk->map->from;
-			destrect.x = sk->hitbox.x;
-			destrect.y = sk->hitbox.y - (screen->h - num_rows * bg_h) + SYMKEY_BORDER_SIZE + SYMMENU_FRET_SIZE;
-			destsurf = TTF_RenderUNICODE_Shaded(corner_font, cornerchar, (SDL_Color)SYMMENU_FONT, (SDL_Color)SYMMENU_BACKGROUND);
-			destrect.w = destsurf->w;
-			destrect.h = destsurf->h;
-			if(SDL_BlitSurface(destsurf, NULL, menu_surface, &destrect) != 0){
-				PRINT(stderr, "Blit Failed: %s\n", SDL_GetError());
+			if (cornerchar[0] != '\0') {
+				destrect.x = sk->hitbox.x;
+				destrect.y = sk->hitbox.y - (screen->h - num_rows * bg_h) + SYMKEY_BORDER_SIZE + SYMMENU_FRET_SIZE;
+				destsurf = TTF_RenderUNICODE_Shaded(corner_font, cornerchar, (SDL_Color)SYMMENU_FONT, (SDL_Color)SYMMENU_BACKGROUND);
+				destrect.w = destsurf->w;
+				destrect.h = destsurf->h;
+				if(SDL_BlitSurface(destsurf, NULL, menu_surface, &destrect) != 0){
+					PRINT(stderr, "Blit Failed: %s\n", SDL_GetError());
+				}
+				SDL_FreeSurface(destsurf);
 			}
-			SDL_FreeSurface(destsurf);
 		}
 	}
 

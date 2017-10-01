@@ -50,20 +50,28 @@ char draw_cursor = 1;
 
 char flash = 0;
 
+/* PREFERENCE STRUCTURES */
 static pref_t *prefs = NULL;
+
+/* INPUT MODIFIERS */
+static int vmodifiers = 0;
+
+/* symbol mode */
+static char symmenu_lock = 0;
 static symmenu_t *current_symmenu = NULL;
 
-static char symmenu_lock = 0;
+/* altsym mode */
 static char altsym_lock = 0;
 
+/* metamode */
 static char metamode = 0;
 static int metamode_doubletap_key = 0;
 static struct timespec metamode_last;
 static SDL_Color metamode_cursor_fg = SDL_BLACK;
 static SDL_Color metamode_cursor_bg = SDL_GREEN;
 static SDL_Surface* metamode_cursor;
-static int vmodifiers = 0;
 
+/* TEXT RENDERING */
 static TTF_Font* font;
 static int text_width;
 static int text_height;
@@ -75,6 +83,7 @@ static SDL_Color default_text_color = SDL_WHITE;
 static SDL_Color default_bg_color = SDL_BLACK;
 struct font_style default_text_style;
 
+/* SURFACE RENDERING */
 struct screenchar blank_sc;
 static SDL_Surface* flash_surface;
 static SDL_Surface* cursor;
@@ -84,15 +93,18 @@ static SDL_Surface* ctrl_key_indicator;
 static SDL_Surface* alt_key_indicator;
 static SDL_Surface* shift_key_indicator;
 static SDL_Surface* altsym_indicator;
+static SDL_Surface* passport_bar;
 SDL_Surface* blank_surface;
 
 static pid_t child_pid = -1;
 
-static char virtualkeyboard_visible = 0;
 static char key_repeat_done = 0;
 
-static SDL_mutex *input_mutex = NULL;
+/* SDL globals */
+static SDL_Thread *render_thread = NULL;
+int run_render(void* data);
 
+static SDL_mutex *input_mutex = NULL;
 static int event_pipe[2];
 
 /* from buffer.c */
@@ -209,24 +221,20 @@ void symmenu_stick(){
 	symmenu_lock = 1;
 }
 
-void symmenu_toggle(symmenu_t *target){
-	if (current_symmenu == NULL){
-		current_symmenu = target;
-		// resize to show menu
+void symmenu_toggle(symmenu_t *target) {
+	int height_intrude = 0;
+	current_symmenu = target;
+	if (current_symmenu != NULL){
 		if (prefs->rescreen_for_symmenu) {
-			setup_screen_size(screen->w, screen->h - current_symmenu->surface->h);
+			height_intrude += current_symmenu->surface->h;
 		}
 		if (prefs->sticky_sym_key) {
 			symmenu_stick();
 		}
 	} else {
-		current_symmenu = NULL;
-		if (prefs->rescreen_for_symmenu) {
-			// resize to take full screen
-			setup_screen_size(screen->w, screen->h);
-		}
 		symmenu_lock = 0;
 	}
+	setup_screen_size(screen->w, screen->h - height_intrude);
 }
 
 static const char* symkey_for_mousedown(symmenu_t *menu, Uint16 x, Uint16 y) {
@@ -238,8 +246,12 @@ static const char* symkey_for_mousedown(symmenu_t *menu, Uint16 x, Uint16 y) {
 			   (x <= key->hitbox.x + key->hitbox.w) &&
 			   (y >= key->hitbox.y) &&
 			   (y <= key->hitbox.y + key->hitbox.h)) {
-				if (!symmenu_lock) {
+				if (!symmenu_lock && !prefs->is_passport) {
 					symmenu_toggle(NULL);
+				} else if (prefs->is_passport) {
+					if (current_symmenu == prefs->main_symmenu) {
+						symmenu_toggle(prefs->passport_bar);
+					}
 				} else {
 					key->flash = 1;
 				}
@@ -384,57 +396,8 @@ void font_uninit(){
 }
 
 void handle_activeevent(int gain, int state){
-	if (gain && prefs->auto_show_vkb){
-		PRINT(stderr, "Got ActiveEvent - initializing keyboard\n");
-		virtualkeyboard_show();
-	}
-}
-
-void handle_mousedown(Uint16 x, Uint16 y){
-	/* check for hits in the metamode_hitbox */
-	if((x >= prefs->metamode_hitbox->x) &&
-	   (x <= prefs->metamode_hitbox->x + prefs->metamode_hitbox->w) &&
-	   (y >= prefs->metamode_hitbox->y) &&
-	   (y <= prefs->metamode_hitbox->y + prefs->metamode_hitbox->h)) {
-		/* hit in the box */
-		metamode_toggle();
-	}
-	/* touching the screen will reveal the keyboard on a Passport,
-	 * since the system wide gesture doesn't work to reveal. */
-	if (prefs->auto_show_vkb){
-		virtualkeyboard_show();
-	}
-
-	/* check for symmenu touches */
-	if(current_symmenu != NULL){
-		send_metamode_keystrokes(symkey_for_mousedown(current_symmenu, x, y));
-	}
-}
-
-void handle_virtualkeyboard_event(bps_event_t *event){
-	PRINT(stderr, "Virtual Keyboard event\n");
-	int event_code = bps_event_get_code(event);
-	int vkb_h;
-	int resolution[2] = {screen->w, screen->h};
-
-	vkb_h = get_virtualkeyboard_height();
-
-	switch (event_code){
-	case VIRTUALKEYBOARD_EVENT_VISIBLE:
-		setup_screen_size(resolution[0], resolution[1] - vkb_h);
-		virtualkeyboard_visible = 1;
-		break;
-	case VIRTUALKEYBOARD_EVENT_HIDDEN:
-		setup_screen_size(resolution[0], resolution[1]);
-		virtualkeyboard_visible = 0;
-		break;
-	case VIRTUALKEYBOARD_EVENT_INFO:
-		vkb_h = virtualkeyboard_visible ? virtualkeyboard_event_get_height(event) : 0;
-		setup_screen_size(resolution[0], resolution[1] - vkb_h);
-		break;
-	default:
-		fprintf(stderr, "Unknown keyboard event code %d\n", event_code);
-		break;
+	if (gain) {
+		/* no-op */
 	}
 }
 
@@ -453,10 +416,6 @@ void rescreen(int w, int h){
 	}
 
 	setup_screen_size(width, height);
-	if(virtualkeyboard_visible){
-		vkb_h = get_virtualkeyboard_height();
-		setup_screen_size(width, height - vkb_h);
-	}
 }
 
 void toggle_vkeymod(int mod){
@@ -467,6 +426,42 @@ void toggle_vkeymod(int mod){
 	else {
 		vmodifiers |= mod;
 	}
+}
+
+
+void handle_mousedown(Uint16 x, Uint16 y){
+	/* check for hits in the metamode_hitbox */
+	if((x >= prefs->metamode_hitbox->x) &&
+	   (x <= prefs->metamode_hitbox->x + prefs->metamode_hitbox->w) &&
+	   (y >= prefs->metamode_hitbox->y) &&
+	   (y <= prefs->metamode_hitbox->y + prefs->metamode_hitbox->h)) {
+		/* hit in the box */
+		metamode_toggle();
+		return;
+	}
+	/* check for symmenu touches */
+	if (current_symmenu != NULL) {
+		const char* key = symkey_for_mousedown(current_symmenu, x, y);
+		if (key == NULL) {
+			return;
+		}
+		
+		switch (key[0]) {
+		case SHIFT_ACTION:
+			toggle_vkeymod(KEYMOD_SHIFT);
+			break;
+		case PASSPORT_SYMMENU_ACTION:
+			symmenu_toggle(prefs->main_symmenu);
+			break;
+		default:
+			send_metamode_keystrokes(key);
+		}
+		return;
+	}
+}
+
+void handle_virtualkeyboard_event(bps_event_t *event){
+	PRINT(stderr, "Virtual Keyboard event\n");
 }
 
 static symmenu_t *get_keyhold_actions(int keycode) {
@@ -599,8 +594,7 @@ void handleKeyboardEvent(screen_event_t screen_event)
 			}
 		}
 		
-		if(!virtualkeyboard_visible
-		   && ((screen_val == KEYCODE_LEFT_SHIFT) || (screen_val == KEYCODE_RIGHT_SHIFT))){
+		if((screen_val == KEYCODE_LEFT_SHIFT) || (screen_val == KEYCODE_RIGHT_SHIFT)){
 			if (prefs->sticky_shift_key) {
 				if(screen_flags & KEY_REPEAT){
 					return;
@@ -676,11 +670,20 @@ void handleKeyboardEvent(screen_event_t screen_event)
 			// else
 			keys = keystroke_lookup((char)screen_val, prefs->metamode_func_keys);
 			if(keys != NULL){
-				int f = 0; /* check custom func commands */
-				if(!f && (0 == strncmp(keys, "alt_down", 8)))          { toggle_vkeymod(KEYMOD_ALT);f=1;}
-				if(!f && (0 == strncmp(keys, "ctrl_down", 9)))         { toggle_vkeymod(KEYMOD_CTRL);f=1;}
-				if(!f && (0 == strncmp(keys, "rescreen", 8)))          { rescreen(-1, -1);f=1;}
-				if(!f && (0 == strncmp(keys, "paste_clipboard", 15)))  { io_paste_from_clipboard();f=1;}
+				switch (keys[0]) {
+				case ALT_DOWN_ACTION:
+					toggle_vkeymod(KEYMOD_ALT);
+					break;
+				case CTRL_DOWN_ACTION:
+					toggle_vkeymod(KEYMOD_CTRL);
+					break;
+				case RESCREEN_ACTION:
+					rescreen(-1, -1);
+					break;
+				case PASTE_ACTION:
+					io_paste_from_clipboard();
+					break;
+				}
 			}
 			metamode_toggle();
 			return;
@@ -688,7 +691,7 @@ void handleKeyboardEvent(screen_event_t screen_event)
 
 		/* handle alt keys */
 		if (altsym_lock) {
-			keys = keystroke_lookup((char)screen_val, prefs->altsym_entries);
+			keys = keystroke_lookup((char)screen_val, prefs->altsym_entries->entries);
 			altsym_toggle();
 			if (keys != NULL){
 				send_metamode_keystrokes(keys);
@@ -697,11 +700,15 @@ void handleKeyboardEvent(screen_event_t screen_event)
 		}
 
 		/* handle sym keys */
-		if (current_symmenu != NULL) {
+		if ((current_symmenu != NULL) && (current_symmenu != prefs->passport_bar)) {
 			keys = keystroke_lookup((char)screen_val, current_symmenu->entries);
 			if (keys != NULL){
 				send_metamode_keystrokes(keys);
-				symmenu_toggle(NULL);
+				if (prefs->is_passport) {
+					symmenu_toggle(prefs->passport_bar);
+				} else {
+					symmenu_toggle(NULL);
+				}
 				return;
 			}
 		}
@@ -845,7 +852,7 @@ void indicate_event_input(){
 	char *indicate_buf = "w";
 	/* indicate that the render thread should run. Note that
 	 * we are logging errors here, but aren't doing anything with them. */
-	if(write(event_pipe[1], (void*)indicate_buf, 1) < 0){
+	if (write(event_pipe[1], (void*)indicate_buf, 1) < 0) {
 		fprintf(stderr, "Error writing to event pipe: %d\n", errno);
 	}
 }
@@ -872,7 +879,7 @@ void set_screen_cols(int ncols){
 }
 
 static int sdl_init() {
-	/* init the input mutex */
+	/* init the mutexes */
 	input_mutex = SDL_CreateMutex();
 	
 	/* init the event input pipe */
@@ -1330,7 +1337,8 @@ int run_render(void* data){
 	UChar lbuf[READ_BUFFER_SIZE];
 	ssize_t num_chars = 0;
 	int master = io_get_master();
-	while(!exit_application){
+	
+	while(!exit_application) {
 		FD_ZERO(&fds);
 		FD_SET(master, &fds);
 		FD_SET(event_pipe[0], &fds);
@@ -1347,7 +1355,6 @@ int run_render(void* data){
 				unlock_input();
 			}
 			if(FD_ISSET(event_pipe[0], &fds)){
-				// Just read the stuff and throw it away
 				read(event_pipe[0], (void*)ev_buf, 99);
 			}
 		}
@@ -1356,7 +1363,7 @@ int run_render(void* data){
 		render();
 		unlock_input();
 	}
-	/* never reached */
+
 	return 0;
 }
 
@@ -1369,7 +1376,7 @@ int main(int argc, char **argv) {
 	
 	prefs = read_preferences(PREFS_FILE_PATH);
 	if (is_passport()) {
-		prefs->auto_show_vkb = 1;
+		prefs->is_passport = 1;
 	}
 
 	/* set auto orientation */
@@ -1409,6 +1416,7 @@ int main(int argc, char **argv) {
 
 	/* render the symmenus */
 	prefs->main_symmenu->surface = render_symmenu(screen, prefs, prefs->main_symmenu);
+	prefs->passport_bar->surface = render_symmenu(screen, prefs, prefs->passport_bar);
 	for (char c = 'a'; c <= 'z'; ++c) {
 		size_t idx = (size_t)(c - 'a');
 
@@ -1425,12 +1433,12 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	if (prefs->auto_show_vkb) {
-		virtualkeyboard_show();
+	if (prefs->is_passport) {
+		symmenu_toggle(prefs->passport_bar);
 	}
 
 	/* start up main event loop */
-	SDL_Thread *render_thread = SDL_CreateThread(run_render, NULL);
+	render_thread = SDL_CreateThread(run_render, NULL);
 	while (!exit_application) {
 
 		//Request and process all available events
@@ -1477,8 +1485,9 @@ int main(int argc, char **argv) {
 	}
 
 	PRINT(stderr, "Exiting run loop\n");
-	SDL_KillThread(render_thread);
-	virtualkeyboard_hide();
+	if (render_thread != NULL) {
+		SDL_WaitThread(render_thread, NULL);
+	}
 	uninit();
 
 	return 0;

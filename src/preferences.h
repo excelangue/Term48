@@ -28,6 +28,13 @@
 #include "symmenu.h"
 #include "SDL.h"
 
+#define ALT_DOWN_ACTION 1
+#define CTRL_DOWN_ACTION 2
+#define RESCREEN_ACTION 3
+#define PASTE_ACTION 4
+#define SHIFT_ACTION 5
+#define PASSPORT_SYMMENU_ACTION 6
+
 #define PREFS_FILE_PATH ".term48rc"
 #define PREFS_FILE_BACKUP ".term48rc-old"
 #define README_FILE_PATH "../app/native/README"
@@ -43,7 +50,7 @@ static int PREFS_VERSION = 9;
 #define DEFAULT_TEXT_COLOR (int[]){255, 255, 255}
 #define DEFAULT_BACKGROUND_COLOR (int[]){0, 0, 0}
 #define DEFAULT_SCREEN_IDLE_AWAKE 0
-#define DEFAULT_AUTO_SHOW_VKB 1
+#define DEFAULT_IS_PASSPORT 0
 #define DEFAULT_METAMODE_DOUBLETAP_KEY KEYCODE_RIGHT_SHIFT
 #define DEFAULT_METAMODE_DOUBLETAP_DELAY 500000000
 #define DEFAULT_KEYHOLD_ACTIONS 1
@@ -59,16 +66,26 @@ static int PREFS_VERSION = 9;
                                                   {'l', "kcuf1"}, \
                                                   {'h', "kcub1"}}
 #define DEFAULT_METAMODE_FUNC_KEYS_LEN 4
-#define DEFAULT_METAMODE_FUNC_KEYS (keymap_t[]){{'a', "alt_down"}, \
-                                                {'c', "ctrl_down"}, \
-                                                {'s', "rescreen"}, \
-                                                {'v', "paste_clipboard"}}
+#define DEFAULT_METAMODE_FUNC_KEYS (keymap_t[]){{'a', (char[]){ALT_DOWN_ACTION, '\0'}}, \
+                                                {'c', (char[]){CTRL_DOWN_ACTION, '\0'}}, \
+                                                {'s', (char[]){RESCREEN_ACTION, '\0'}}, \
+                                                {'v', (char[]){PASTE_ACTION, '\0'}}}
 #define DEFAULT_SYMMENU_NUM_ROWS 2
 #define DEFAULT_SYMMENU_ROW_LENS (int[]){10, 9}
 #define DEFAULT_SYMMENU_ENTRIES (keymap_t[]) {  \
     {'q', "~"}, {'w', "`"}, {'e', "{"}, {'r', "}"}, {'t', "["}, {'y', "]"}, {'u', "<"}, {'i', ">"}, {'o', "^"}, {'p', "%"}, \
     {'a', "="}, {'s', "-"}, {'d', "*"}, {'f', "/"}, {'g', "\\"},{'h', "|"}, {'j', "&"}, {'k', "'"}, {'l', "\""} \
 }
+
+#define PASSPORTVKB_NUM_ROWS 1
+#define PASSPORTVKB_ROW_LENS (int[]){10}
+/*#define PASSPORTVKB_ENTRIES (keymap_t[]) {	  \
+    {'\0', (char[]){SHIFT_ACTION, '^', '\0'}}, {'\0', (char[]){SHIFT_ACTION, '^', '\0'}}, {'\0', ","}, {'\0', "'"}, {'\0', ":"}, {'\0', "!"}, {'\0', "?"}, {'\0', "."}, {'\0', (char[]){PASSPORT_SYMMENU_ACTION, '&', '\0'}}, {'\0', (char[]){PASSPORT_SYMMENU_ACTION, '&', '\0'}}, \
+				            }*/
+#define PASSPORTVKB_ENTRIES (keymap_t[]) {  \
+    {'\0', "^"}, {'\0', "^"}, {'\0', ","}, {'\0', "'"}, {'\0', ":"}, {'\0', "!"}, {'\0', "?"}, {'\0', "."}, {'\0', "&"}, {'\0', "&"}, \
+}
+
 #define DEFAULT_STICKY_SYM_KEY 0
 #define DEFAULT_STICKY_SHIFT_KEY 1
 #define DEFAULT_STICKY_ALT_KEY 1
