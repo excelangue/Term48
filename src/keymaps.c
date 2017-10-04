@@ -30,8 +30,8 @@ keymap_t default_symmenu_entries[] = {
 int passportvkb_num_rows = 1;
 int passportvkb_row_lens[] = {10};
 keymap_t passportvkb_entries[] = {
-	{'\0', PASSPORT_SHIFT_GLYPH}, {'\0', PASSPORT_SHIFT_GLYPH}, {'\0', "_"}, {'\0', "-"},
-	{'\0', ":"}, {'\0', "/"}, {'\0', "?"}, {'\0', "."}, {'\0', PASSPORT_SYMMENU_OPEN_GLYPH}, {'\0', PASSPORT_SYMMENU_OPEN_GLYPH},
+	{'\0', PASSPORT_SHIFT_GLYPH}, {'\0', NULL}, {'\0', "_"}, {'\0', "-"},
+	{'\0', ":"}, {'\0', "/"}, {'\0', "?"}, {'\0', "."}, {'\0', PASSPORT_SYMMENU_OPEN_GLYPH}, {'\0', NULL},
 };
 
 int default_keyhold_actions_exempt_len = 2;

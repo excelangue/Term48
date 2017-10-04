@@ -55,9 +55,16 @@ SDL_Surface *render_symmenu(SDL_Surface *screen, pref_t *prefs, symmenu_t *menu)
 	}
 
 	/* symmenus should all be the same size (and centered, ideally) */
-	int bg_font_size = preferences_guess_best_font_size(prefs, 10 * 1.25);
+	int bg_font_size = preferences_guess_best_font_size(prefs, 10);
 	int corner_font_size = bg_font_size / 5;
-	int fg_font_size = (6 * bg_font_size) / 10;
+	
+	int fg_font_size;
+	/* passport should have squatter keys */
+	if (prefs->is_passport) {
+		fg_font_size = (4 * bg_font_size) / 10;
+	} else {
+		fg_font_size = (6 * bg_font_size) / 10;
+	}
 
 	/* Load the font - if this was going to fail, it would have failed earlier in init() */
 	TTF_Font* fg_font = TTF_OpenFont(prefs->font_path, fg_font_size);
@@ -92,11 +99,22 @@ SDL_Surface *render_symmenu(SDL_Surface *screen, pref_t *prefs, symmenu_t *menu)
 		for (int col = 0; menu->keys[row][col].map != NULL; ++col) {
 			symkey_t *sk = &menu->keys[row][col];
 			
+			/* skip uchar if blank */
+			if (sk->map->to == NULL) {
+				continue;
+			}
+			
 			/* calculate the background positions */
 			sk->hitbox.x = col * bg_w;
 			sk->hitbox.y = (screen->h - num_rows * bg_h) + row * bg_h;
 			sk->hitbox.w = bg_w;
 			sk->hitbox.h = bg_h;
+			
+			/* double width */
+			if ((menu->keys[row][col + 1].map != NULL) &&
+			    (menu->keys[row][col + 1].map->to == NULL)) {
+				sk->hitbox.w = bg_w * 2;
+			}
 			
 			/* init the UChar from prefs keymap */
 			int to_len = strlen(sk->map->to);
@@ -121,7 +139,23 @@ SDL_Surface *render_symmenu(SDL_Surface *screen, pref_t *prefs, symmenu_t *menu)
 		return NULL;
 	}
 
-		/* render frets */
+	/* vertical borders */
+	for (int col = 1; col < 10; ++col) {
+		destrect.x = (col * bg_w) - SYMKEY_BORDER_SIZE;
+		destrect.y = 0;
+		destrect.h = bg_h * num_rows;
+		destrect.w = 2 * SYMKEY_BORDER_SIZE;
+		
+		SDL_Color bgc = (SDL_Color)SYMMENU_FRET;
+		Uint32 border_fill_color = SDL_MapRGB(screen->format, bgc.r, bgc.b, bgc.g);
+		
+		if (SDL_FillRect(menu_surface, &destrect, border_fill_color) != 0) {
+			fprintf(stderr, "Symmenu border bgfill failed: %s\n", SDL_GetError());
+			return NULL;
+		}
+	}
+
+	/* render frets */
 	for (int i = 0; i < num_rows; ++i) {
 		SDL_Rect destrect;
 		destrect.x = 0;
@@ -163,14 +197,22 @@ SDL_Surface *render_symmenu(SDL_Surface *screen, pref_t *prefs, symmenu_t *menu)
 	for (int row = 0; menu->keys[row] != NULL; ++row) {
 		for (int col = 0; menu->keys[row][col].map != NULL; ++col) {
 			symkey_t *sk = &menu->keys[row][col];
-			SDL_Rect destrect;
-
+			
+			/* skip if blank */
+			if (sk->uc == NULL) {
+				continue;
+			}
+			
 			/* main symbol */
-			destrect.x = sk->hitbox.x + SYMKEY_BORDER_SIZE;
-			destrect.y = sk->hitbox.y - (screen->h - num_rows * bg_h) + SYMKEY_BORDER_SIZE + SYMMENU_FRET_SIZE;
+			SDL_Rect destrect;
+			
 			SDL_Surface *destsurf = TTF_RenderUNICODE_Shaded(fg_font, sk->uc, (SDL_Color)SYMMENU_FONT, (SDL_Color)SYMMENU_BACKGROUND);
 			destrect.w = destsurf->w;
 			destrect.h = destsurf->h;
+			
+			destrect.x = sk->hitbox.x + (sk->hitbox.w / 2) - (destsurf->w / 2) + SYMKEY_BORDER_SIZE;
+			destrect.y = sk->hitbox.y - (screen->h - num_rows * bg_h) + SYMKEY_BORDER_SIZE + SYMMENU_FRET_SIZE;
+			
 			if (SDL_BlitSurface(destsurf, NULL, menu_surface, &destrect) != 0){
 				PRINT(stderr, "Blit Failed: %s\n", SDL_GetError());
 			}
@@ -179,7 +221,7 @@ SDL_Surface *render_symmenu(SDL_Surface *screen, pref_t *prefs, symmenu_t *menu)
 			/* from key */
 			cornerchar[0] = sk->map->from;
 			if (cornerchar[0] != '\0') {
-				destrect.x = sk->hitbox.x;
+				destrect.x = sk->hitbox.x + (2 * SYMKEY_BORDER_SIZE);
 				destrect.y = sk->hitbox.y - (screen->h - num_rows * bg_h) + SYMKEY_BORDER_SIZE + SYMMENU_FRET_SIZE;
 				destsurf = TTF_RenderUNICODE_Shaded(corner_font, cornerchar, (SDL_Color)SYMMENU_FONT, (SDL_Color)SYMMENU_BACKGROUND);
 				destrect.w = destsurf->w;

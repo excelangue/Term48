@@ -241,7 +241,6 @@ static const char* symkey_for_mousedown(symmenu_t *menu, Uint16 x, Uint16 y) {
 	for (int row = 0; menu->keys[row] != NULL; ++row) {
 		for (int col = 0; menu->keys[row][col].map != NULL; ++col) {
 			symkey_t *key = &menu->keys[row][col];
-
 			if((x >= key->hitbox.x) &&
 			   (x <= key->hitbox.x + key->hitbox.w) &&
 			   (y >= key->hitbox.y) &&
@@ -255,6 +254,7 @@ static const char* symkey_for_mousedown(symmenu_t *menu, Uint16 x, Uint16 y) {
 				} else {
 					key->flash = 1;
 				}
+				
 				return key->map->to;
 			}
 		}
