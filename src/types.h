@@ -40,7 +40,7 @@ typedef struct _pref_t {
 	symmenu_t *main_symmenu;
 	symmenu_t *accent_menus[26][2];
 	symmenu_t *altsym_entries;
-	symmenu_t *passport_bar;
+	symmenu_t *passport_bar, *passport_sym1, *passport_sym2;
 	
 	int sticky_sym_key, sticky_shift_key, sticky_alt_key;
 	int *keyhold_actions_exempt; /* terminated by -1 */

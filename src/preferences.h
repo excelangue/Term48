@@ -36,7 +36,9 @@
 
 #define PASSPORT_SHIFT_GLYPH "\u2191"
 #define PASSPORT_SYMMENU_OPEN_GLYPH "\u2026"
-#define PASSPORT_SYMMENU_CLOSE_GLYPH "\u21A7"
+#define PASSPORT_SYMMENU_CLOSE_GLYPH "\u2193"
+#define PASSPORT_SYMMENU_ACTIVE_PAGE_GLYPH "\u25CF"
+#define PASSPORT_SYMMENU_INACTIVE_PAGE_GLYPH "\u25CB"
 
 #define PREFS_FILE_PATH ".term48rc"
 #define PREFS_FILE_BACKUP ".term48rc-old"
@@ -70,7 +72,7 @@ static int PREFS_VERSION = 9;
 
 int preferences_guess_best_font_size(pref_t *prefs, int target_cols);
 
-pref_t* read_preferences(const char* filename);
+pref_t* read_preferences(const char* filename, int is_passport);
 void save_preferences(pref_t const* pref, char const* filename);
 void destroy_preferences(pref_t *pref);
 

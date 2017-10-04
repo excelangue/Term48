@@ -222,11 +222,12 @@ void symmenu_stick(){
 }
 
 void symmenu_toggle(symmenu_t *target) {
-	int height_intrude = 0;
 	current_symmenu = target;
+
 	if (current_symmenu != NULL){
+		
 		if (prefs->rescreen_for_symmenu) {
-			height_intrude += current_symmenu->surface->h;
+			setup_screen_size(screen->w, screen->h - target->surface->h);
 		}
 		if (prefs->sticky_sym_key) {
 			symmenu_stick();
@@ -234,7 +235,6 @@ void symmenu_toggle(symmenu_t *target) {
 	} else {
 		symmenu_lock = 0;
 	}
-	setup_screen_size(screen->w, screen->h - height_intrude);
 }
 
 static const char* symkey_for_mousedown(symmenu_t *menu, Uint16 x, Uint16 y) {
@@ -402,7 +402,6 @@ void handle_activeevent(int gain, int state){
 }
 
 void rescreen(int w, int h){
-
 	int width  = w == -1 ? screen->w : w;
 	int height = h == -1 ? screen->h : h;
 	int vkb_h = 0;
@@ -415,7 +414,7 @@ void rescreen(int w, int h){
 		exit_application = 1;
 	}
 
-	setup_screen_size(width, height);
+	setup_screen_size(width, height - (prefs->is_passport ? prefs->passport_bar->surface->h : 0));
 }
 
 void toggle_vkeymod(int mod){
@@ -449,7 +448,16 @@ void handle_mousedown(Uint16 x, Uint16 y){
 		if (!strcmp(key, PASSPORT_SHIFT_GLYPH)) {
 			toggle_vkeymod(KEYMOD_SHIFT);
 		} else if (!strcmp(key, PASSPORT_SYMMENU_OPEN_GLYPH)) {
-			symmenu_toggle(prefs->main_symmenu);
+			symmenu_toggle(prefs->passport_sym1);
+		} else if (!strcmp(key, PASSPORT_SYMMENU_CLOSE_GLYPH)) {
+			symmenu_toggle(prefs->passport_bar);
+		} else if (!strcmp(key, PASSPORT_SYMMENU_ACTIVE_PAGE_GLYPH) ||
+		           !strcmp(key, PASSPORT_SYMMENU_INACTIVE_PAGE_GLYPH)) {
+			if (current_symmenu == prefs->passport_sym1) {
+				symmenu_toggle(prefs->passport_sym2);
+			} else {
+				symmenu_toggle(prefs->passport_sym1);
+			}
 		} else {
 			send_metamode_keystrokes(key);
 		}
@@ -790,7 +798,7 @@ void setup_screen_size(int s_w, int s_h){
 		/* refusing to do that */
 		return;
 	}
-
+	
 	int old_rows = rows;
 	int old_bottom_line = buf_bottom_line();
 	rows = s_h / text_height;
@@ -1365,10 +1373,7 @@ int main(int argc, char **argv) {
 	char* home = getenv("HOME");
 	if(home != NULL){ chdir(home); }
 	
-	prefs = read_preferences(PREFS_FILE_PATH);
-	if (is_passport()) {
-		prefs->is_passport = 1;
-	}
+	prefs = read_preferences(PREFS_FILE_PATH, is_passport());
 
 	/* set auto orientation */
 	setenv("AUTO_ORIENTATION", "1", 0);
@@ -1407,7 +1412,17 @@ int main(int argc, char **argv) {
 
 	/* render the symmenus */
 	prefs->main_symmenu->surface = render_symmenu(screen, prefs, prefs->main_symmenu);
-	prefs->passport_bar->surface = render_symmenu(screen, prefs, prefs->passport_bar);
+
+	if (prefs->is_passport) {
+		prefs->passport_bar->surface = render_symmenu(screen, prefs, prefs->passport_bar);
+		symmenu_toggle(prefs->passport_bar);
+		prefs->passport_sym1->surface = render_symmenu(screen, prefs, prefs->passport_sym1);
+		prefs->passport_sym2->surface = render_symmenu(screen, prefs, prefs->passport_sym2);
+
+		/* rescreen to apply passport bar height */
+		rescreen(-1, -1);
+	}
+	
 	for (char c = 'a'; c <= 'z'; ++c) {
 		size_t idx = (size_t)(c - 'a');
 
@@ -1422,10 +1437,6 @@ int main(int argc, char **argv) {
 		if (m->entries[1].to != NULL) {
 			m->surface = render_symmenu(screen, prefs, m);
 		}
-	}
-
-	if (prefs->is_passport) {
-		symmenu_toggle(prefs->passport_bar);
 	}
 
 	/* start up main event loop */

@@ -25,6 +25,10 @@
 #include "colors.h"
 
 void destroy_symmenu(symmenu_t *menu) {
+	if (menu == NULL) {
+		return;
+	}
+	
 	for (symkey_t **row = menu->keys; row != NULL; ++row) {
 		for (symkey_t *key = *row; key->map != NULL; ++key) {
 			free(key->uc);

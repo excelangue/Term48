@@ -373,7 +373,11 @@ void destroy_preferences(pref_t *pref) {
 	free(pref->metamode_func_keys);
 
 	destroy_symmenu(pref->main_symmenu);
-	destroy_symmenu(pref->passport_bar);
+	if (pref->is_passport) {
+		destroy_symmenu(pref->passport_bar);
+		destroy_symmenu(pref->passport_sym1);
+		destroy_symmenu(pref->passport_sym2);
+	}
 	
 	free(pref->keyhold_actions_exempt);
 
@@ -382,7 +386,7 @@ void destroy_preferences(pref_t *pref) {
 
 #define DEFAULT_LOOKUP(type, conf, path, target, defval)	  \
 	do { if (CONFIG_TRUE != config_lookup_##type(conf, path, &(target))) { target = defval; } } while(0)
-pref_t *read_preferences(const char* filename) {
+pref_t *read_preferences(const char* filename, int is_passport) {
 	pref_t *prefs = calloc(1, sizeof(pref_t)); // our internal data structure
 	if (prefs == NULL) {
 		fprintf(stderr, "fatal error: failed to calloc prefs structure\n");
@@ -419,7 +423,9 @@ pref_t *read_preferences(const char* filename) {
 	prefs->text_color = create_int_array(config, "text_color", PREFS_COLOR_NUM_ELEMENTS, DEFAULT_TEXT_COLOR, 0);
 	prefs->background_color = create_int_array(config, "background_color", PREFS_COLOR_NUM_ELEMENTS, DEFAULT_BACKGROUND_COLOR, 0);
 	DEFAULT_LOOKUP(bool, config, "screen_idle_awake", prefs->screen_idle_awake, DEFAULT_SCREEN_IDLE_AWAKE);
-	DEFAULT_LOOKUP(bool, config, "is_passport", prefs->is_passport, DEFAULT_IS_PASSPORT);
+	
+	prefs->is_passport = is_passport;
+	
 	DEFAULT_LOOKUP(int, config, "metamode_doubletap_key", prefs->metamode_doubletap_key, DEFAULT_METAMODE_DOUBLETAP_KEY);
 	DEFAULT_LOOKUP(int, config, "metamode_doubletap_delay", prefs->metamode_doubletap_delay, DEFAULT_METAMODE_DOUBLETAP_DELAY);
 	DEFAULT_LOOKUP(bool, config, "keyhold_actions", prefs->keyhold_actions, DEFAULT_KEYHOLD_ACTIONS);
@@ -446,7 +452,16 @@ pref_t *read_preferences(const char* filename) {
 
 	prefs->main_symmenu = create_symmenu(config, "main_symmenu", default_symmenu_num_rows, default_symmenu_row_lens, default_symmenu_entries);
 	prefs->altsym_entries = create_keymap_array(config, "altsym_entries", default_altsym_entries_len, default_altsym_entries);
-	prefs->passport_bar = create_symmenu(config, "passport_bar", passportvkb_num_rows, passportvkb_row_lens, passportvkb_entries);
+
+	if (prefs->is_passport) {
+		prefs->passport_bar = create_symmenu(config, "passport_bar", passportvkb_num_rows, passportvkb_row_lens, passportvkb_entries);
+		prefs->passport_sym1 = create_symmenu(config, "passport_sym1", passportsym1_num_rows, passportsym1_row_lens, passportsym1_entries);
+		prefs->passport_sym2 = create_symmenu(config, "passport_sym2", passportsym2_num_rows, passportsym2_row_lens, passportsym2_entries);
+	} else {
+		prefs->passport_bar = NULL;
+		prefs->passport_sym1 = NULL;
+		prefs->passport_sym2 = NULL;
+	}
 
 	/* the accent menus are configurable, but we won't include them in the default config */
 	char am_name[] = {' ', '_', 'a', 'c', 'c', 'e', 'n', 't', 's', '\0'};
