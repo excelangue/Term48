@@ -446,14 +446,11 @@ void handle_mousedown(Uint16 x, Uint16 y){
 			return;
 		}
 		
-		switch (key[0]) {
-		case SHIFT_ACTION:
+		if (!strcmp(key, PASSPORT_SHIFT_GLYPH)) {
 			toggle_vkeymod(KEYMOD_SHIFT);
-			break;
-		case PASSPORT_SYMMENU_ACTION:
+		} else if (!strcmp(key, PASSPORT_SYMMENU_OPEN_GLYPH)) {
 			symmenu_toggle(prefs->main_symmenu);
-			break;
-		default:
+		} else {
 			send_metamode_keystrokes(key);
 		}
 		return;
@@ -667,22 +664,16 @@ void handleKeyboardEvent(screen_event_t screen_event)
 				metamode_toggle();
 				return;
 			}
-			// else
 			keys = keystroke_lookup((char)screen_val, prefs->metamode_func_keys);
-			if(keys != NULL){
-				switch (keys[0]) {
-				case ALT_DOWN_ACTION:
+			if (keys != NULL) {
+				if (!strcmp(keys, ALT_DOWN_ACTION)) {
 					toggle_vkeymod(KEYMOD_ALT);
-					break;
-				case CTRL_DOWN_ACTION:
+				} else if (!strcmp(keys, CTRL_DOWN_ACTION)) {
 					toggle_vkeymod(KEYMOD_CTRL);
-					break;
-				case RESCREEN_ACTION:
+				} else if (!strcmp(keys, RESCREEN_ACTION)) {
 					rescreen(-1, -1);
-					break;
-				case PASTE_ACTION:
+				} else if (!strcmp(keys, ALT_DOWN_ACTION)) {
 					io_paste_from_clipboard();
-					break;
 				}
 			}
 			metamode_toggle();

@@ -428,19 +428,25 @@ pref_t *read_preferences(const char* filename) {
 	prefs->metamode_hitbox = create_hitbox(config, "metamode_hitbox", DEFAULT_METAMODE_HITBOX);
 	DEFAULT_LOOKUP(string, config, "tty_encoding", prefs->tty_encoding, DEFAULT_TTY_ENCODING);
 	prefs->tty_encoding = strdup(prefs->tty_encoding);
-	prefs->metamode_keys = create_keymap_array(config, "metamode_keys", DEFAULT_METAMODE_KEYS_LEN, DEFAULT_METAMODE_KEYS);
-	prefs->metamode_sticky_keys = create_keymap_array(config, "metamode_sticky_keys", DEFAULT_METAMODE_STICKY_KEYS_LEN, DEFAULT_METAMODE_STICKY_KEYS);
-	prefs->metamode_func_keys = create_keymap_array(config, "metamode_func_keys", DEFAULT_METAMODE_FUNC_KEYS_LEN, DEFAULT_METAMODE_FUNC_KEYS);
+	
+	prefs->metamode_keys = create_keymap_array(config, "metamode_keys", default_metamode_keys_len, default_metamode_keys);
+	
+	prefs->metamode_sticky_keys = create_keymap_array(config, "metamode_sticky_keys", default_metamode_sticky_keys_len, default_metamode_sticky_keys);
+	
+	prefs->metamode_func_keys = create_keymap_array(config, "metamode_func_keys", default_metamode_func_keys_len, default_metamode_func_keys);
+	
 	DEFAULT_LOOKUP(bool, config, "sticky_sym_key", prefs->sticky_sym_key, DEFAULT_STICKY_SYM_KEY);
 	DEFAULT_LOOKUP(bool, config, "sticky_shift_key", prefs->sticky_shift_key, DEFAULT_STICKY_SHIFT_KEY);
 	DEFAULT_LOOKUP(bool, config, "sticky_alt_key", prefs->sticky_alt_key, DEFAULT_STICKY_ALT_KEY);
-	prefs->keyhold_actions_exempt = create_int_array(config, "keyhold_actions_exempt", DEFAULT_KEYHOLD_ACTIONS_EXEMPT_LEN, DEFAULT_KEYHOLD_ACTIONS_EXEMPT, 1);
+	
+	prefs->keyhold_actions_exempt = create_int_array(config, "keyhold_actions_exempt", default_keyhold_actions_exempt_len, default_keyhold_actions_exempt, 1);
+	
 	DEFAULT_LOOKUP(bool, config, "rescreen_for_symmenu", prefs->rescreen_for_symmenu, DEFAULT_RESCREEN_FOR_SYMMENU);
 	DEFAULT_LOOKUP(bool, config, "keyhold_accents", prefs->keyhold_accents, DEFAULT_KEYHOLD_ACCENTS);
 
-	prefs->main_symmenu = create_symmenu(config, "main_symmenu", DEFAULT_SYMMENU_NUM_ROWS, DEFAULT_SYMMENU_ROW_LENS, DEFAULT_SYMMENU_ENTRIES);
-	prefs->altsym_entries = create_keymap_array(config, "altsym_entries", DEFAULT_ALTSYM_ENTRIES_LEN, DEFAULT_ALTSYM_ENTRIES);
-	prefs->passport_bar = create_symmenu(config, "passport_bar", PASSPORTVKB_NUM_ROWS, PASSPORTVKB_ROW_LENS, PASSPORTVKB_ENTRIES);
+	prefs->main_symmenu = create_symmenu(config, "main_symmenu", default_symmenu_num_rows, default_symmenu_row_lens, default_symmenu_entries);
+	prefs->altsym_entries = create_keymap_array(config, "altsym_entries", default_altsym_entries_len, default_altsym_entries);
+	prefs->passport_bar = create_symmenu(config, "passport_bar", passportvkb_num_rows, passportvkb_row_lens, passportvkb_entries);
 
 	/* the accent menus are configurable, but we won't include them in the default config */
 	char am_name[] = {' ', '_', 'a', 'c', 'c', 'e', 'n', 't', 's', '\0'};
